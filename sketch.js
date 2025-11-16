@@ -1,5 +1,6 @@
-// Pacita Abad's "Wheels of Fortune" Recreation
-// Group Tut 4 Group F - Final Version with Regenerate Function
+// Pacita Abad's "Wheels of Fortune" Recreation - User Input Animation Version 1
+// Individual Task: Mouse Interaction Animation
+// Group Tut 4 Group F - Individual Variation by Yixin Wu
 
 // Color palettes for the artwork
 let colorPalettes = [
@@ -9,32 +10,49 @@ let colorPalettes = [
   ["#2A9D8F", "#E9C46A", "#F4A261", "#E76F51", "#264653", "#FFD740"]
 ];
 
+// Animation variables
+let circles = [];
+let rotationAngle = 0;
+let currentPaletteIndex = 0;
+let mouseInfluenceRadius = 300;
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   angleMode(DEGREES);
-  noLoop();
+  
+  // Generate initial circles
+  generateCircles();
 }
 
 function draw() {
   background("#1e2c3a");
   
-  // How many circles we want to draw on the screen
-  let circleCount = 15;
+  // Update rotation angle based on mouse X position
+  // Mouse at left edge: slow rotation, right edge: fast rotation
+  rotationAngle += map(mouseX, 0, width, 0.5, 3);
   
-  // Store placed circles to reduce overlap
+  // Draw all circles with animation
+  for (let circle of circles) {
+    drawAnimatedCircle(circle);
+  }
+  
+  // Display interaction instructions
+  displayInstructions();
+}
+
+// Generate circle data
+function generateCircles() {
+  circles = [];
+  let circleCount = 15;
   let placed = [];
   
   for (let i = 0; i < circleCount; i++) {
-    // Random size for each circle
     let size = random(180, 320);
-    
-    // Keep circles away from the edges
     let margin = size * 0.7;
     let x, y;
     let ok = false;
     let tries = 0;
     
-    // Try a few times to avoid heavy overlap
     while (!ok && tries < 200) {
       x = random(margin, width - margin);
       y = random(margin, height - margin);
@@ -52,135 +70,170 @@ function draw() {
       tries++;
     }
     
-    // Only draw if we found a reasonable position
     if (ok) {
+      // Store circle data with additional properties for animation
+      circles.push({
+        x: x,
+        y: y,
+        size: size,
+        baseSize: size, // Store original size for reference
+        rotationOffset: random(360), // Each circle rotates at different starting point
+        rotationSpeed: random(0.8, 1.2), // Each circle rotates at different speed
+        palette: colorPalettes[currentPaletteIndex]
+      });
       placed.push({ x, y, size });
-      drawCircle(x, y, size);
     }
   }
 }
 
-// Draw one circle with many patterns
-function drawCircle(x, y, size) {
+// Draw animated circle with mouse interaction
+function drawAnimatedCircle(circleData) {
   push();
-  translate(x, y);
+  translate(circleData.x, circleData.y);
   
-  // Select a random color palette for this circle
-  let palette = random(colorPalettes);
+  // Calculate mouse influence on this circle
+  let distanceToMouse = dist(mouseX, mouseY, circleData.x, circleData.y);
+  let mouseInfluence = map(distanceToMouse, 0, mouseInfluenceRadius, 1, 0, true);
   
-  // Background glow
+  // Apply rotation animation
+  let individualRotation = rotationAngle * circleData.rotationSpeed + circleData.rotationOffset;
+  
+  // Apply size animation based on mouse Y position and proximity
+  let sizeVariation = map(mouseY, 0, height, 0.7, 1.3);
+  let mouseSizeEffect = map(mouseInfluence, 0, 1, 1.2, 1);
+  let animatedSize = circleData.baseSize * sizeVariation * mouseSizeEffect;
+  
+  // Rotate the entire circle based on mouse position
+  rotate(individualRotation * mouseInfluence);
+  
+  // Background glow with mouse influence
   noStroke();
-  fill(255, 255, 255, 35);
-  ellipse(0, 0, size * 1.18);
+  fill(255, 255, 255, 35 * mouseInfluence);
+  ellipse(0, 0, animatedSize * 1.18);
   
-  // Main circle
-  fill(palette[0]);
-  ellipse(0, 0, size);
+  // Main circle - color intensity changes with mouse proximity
+  let mainColor = color(circleData.palette[0]);
+  if (mouseInfluence > 0.5) {
+    mainColor.setAlpha(200);
+  } else {
+    mainColor.setAlpha(150);
+  }
+  fill(mainColor);
+  ellipse(0, 0, animatedSize);
   
-  // Scattered small colorful dots inside the big circle
+  // Animated scattered dots - move around based on rotation
   let scatterDots = 30;
   for (let i = 0; i < scatterDots; i++) {
-    let r = random(size * 0.05, size * 0.40);
-    let a = random(360);
-    let px = cos(a) * r;
-    let py = sin(a) * r;
+    let baseAngle = i * (360 / scatterDots) + individualRotation * 2;
+    let r = random(animatedSize * 0.05, animatedSize * 0.40);
+    let px = cos(baseAngle) * r;
+    let py = sin(baseAngle) * r;
+    
     noStroke();
-    fill(random(palette));
-    ellipse(px, py, size * 0.035);
+    let dotColor = color(random(circleData.palette));
+    dotColor.setAlpha(200 * mouseInfluence);
+    fill(dotColor);
+    ellipse(px, py, animatedSize * 0.035);
   }
   
-  // Ring lines around the circle
-  stroke(palette[1]);
-  strokeWeight(2);
+  // Animated ring lines - pulse with mouse proximity
+  stroke(circleData.palette[1]);
+  strokeWeight(2 * mouseInfluence);
   noFill();
-  for (let r = size * 0.55; r < size * 0.92; r += size * 0.07) {
-    ellipse(0, 0, r);
+  
+  let ringPulse = sin(frameCount * 0.1) * 0.1 + 1; // Gentle pulsing effect
+  for (let r = animatedSize * 0.55; r < animatedSize * 0.92; r += animatedSize * 0.07) {
+    ellipse(0, 0, r * ringPulse);
   }
   
-  // Inside dots - colorful
-  stroke(255);
+  // Animated inside dots - orbit around center
+  stroke(255, 255 * mouseInfluence);
   strokeWeight(1.4);
   let insideDots = 16;
   for (let i = 0; i < insideDots; i++) {
-    let angle = i * (360 / insideDots);
-    let px = cos(angle) * (size * 0.38);
-    let py = sin(angle) * (size * 0.38);
-    fill(random(palette));
-    ellipse(px, py, size * 0.09);
+    let orbitAngle = i * (360 / insideDots) + individualRotation * 1.5;
+    let px = cos(orbitAngle) * (animatedSize * 0.38);
+    let py = sin(orbitAngle) * (animatedSize * 0.38);
+    
+    fill(random(circleData.palette));
+    ellipse(px, py, animatedSize * 0.09);
   }
   
-  // Enhanced orbital ring with precise dots
-  drawOrbitalRing(size, palette);
+  // Enhanced orbital ring with animation
+  drawAnimatedOrbitalRing(animatedSize, circleData.palette, individualRotation, mouseInfluence);
   
-  // 8 lines like wheel spokes
+  // Animated wheel spokes - change length based on mouse Y
   stroke("#FFFFFF");
-  strokeWeight(2);
+  strokeWeight(2 * mouseInfluence);
+  let spokeLength = animatedSize * 0.43 * map(mouseY, 0, height, 0.8, 1.2);
   for (let i = 0; i < 8; i++) {
-    let angle = i * 45;
-    let px = cos(angle) * (size * 0.43);
-    let py = sin(angle) * (size * 0.43);
+    let angle = i * 45 + individualRotation * 0.5;
+    let px = cos(angle) * spokeLength;
+    let py = sin(angle) * spokeLength;
     line(0, 0, px, py);
   }
   
-  // Center dots
+  // Center dots with pulsing effect
+  let centerPulse = sin(frameCount * 0.2) * 0.1 + 1;
   fill("#FAFAFA");
   stroke("#FFFFFF");
   strokeWeight(2);
-  ellipse(0, 0, size * 0.15);
+  ellipse(0, 0, animatedSize * 0.15 * centerPulse);
+  
   noStroke();
-  fill(palette[2]);
-  ellipse(0, 0, size * 0.07);
+  fill(circleData.palette[2]);
+  ellipse(0, 0, animatedSize * 0.07 * centerPulse);
   
   pop();
 }
 
-// Draw orbital ring with concentric dots and connecting orbit
-function drawOrbitalRing(size, palette) {
-  // Use 8-10 concentric dots
-  let outerDotCount = floor(random(8, 11));
+// Draw animated orbital ring
+function drawAnimatedOrbitalRing(size, palette, rotation, influence) {
+  let outerDotCount = 8;
   let orbitRadius = size * 0.65;
   
-  // Draw connecting orbit dots first
-  drawConnectingOrbit(orbitRadius, size, palette, outerDotCount);
+  // Draw connecting orbit with animation
+  drawAnimatedConnectingOrbit(orbitRadius, size, palette, outerDotCount, rotation, influence);
   
-  // Then draw the concentric dots
+  // Draw concentric dots with orbital motion
   for (let i = 0; i < outerDotCount; i++) {
-    let angle = i * (360 / outerDotCount);
-    let px = cos(angle) * orbitRadius;
-    let py = sin(angle) * orbitRadius;
+    let baseAngle = i * (360 / outerDotCount) + rotation;
+    let px = cos(baseAngle) * orbitRadius;
+    let py = sin(baseAngle) * orbitRadius;
     
-    // Draw three-layer concentric dot
-    drawConcentricDot(px, py, size * 0.08);
+    // Animated concentric dot
+    drawAnimatedConcentricDot(px, py, size * 0.08, rotation, influence);
   }
 }
 
-// Draw connecting orbit between concentric dots
-function drawConnectingOrbit(orbitRadius, size, palette, outerDotCount) {
-  // Place 6-8 connecting dots between each concentric dot
-  let dotsPerSegment = floor(random(6, 9));
-  let totalConnectingDots = outerDotCount * dotsPerSegment;
+// Draw animated connecting orbit
+function drawAnimatedConnectingOrbit(orbitRadius, size, palette, dotCount, rotation, influence) {
+  let dotsPerSegment = 6;
+  let totalConnectingDots = dotCount * dotsPerSegment;
   
   for (let i = 0; i < totalConnectingDots; i++) {
-    let angle = i * (360 / totalConnectingDots);
-    let px = cos(angle) * orbitRadius;
-    let py = sin(angle) * orbitRadius;
+    let baseAngle = i * (360 / totalConnectingDots) + rotation * 2;
+    let px = cos(baseAngle) * orbitRadius;
+    let py = sin(baseAngle) * orbitRadius;
     
-    // Random size and color for connecting dots
-    let dotSize = random(size * 0.015, size * 0.04);
-    let dotColor = random(palette);
+    let dotSize = map(sin(baseAngle + frameCount * 0.2), -1, 1, size * 0.015, size * 0.04);
+    let dotColor = color(random(palette));
+    dotColor.setAlpha(255 * influence);
     
     noStroke();
     fill(dotColor);
     ellipse(px, py, dotSize);
     
-    // Sometimes add smaller satellite dots
-    if (random() > 0.85) {
-      let satelliteOffset = random(-size * 0.02, size * 0.02);
-      let satelliteX = px + cos(angle * 2) * satelliteOffset;
-      let satelliteY = py + sin(angle * 2) * satelliteOffset;
+    // Animated satellite dots
+    if (random() > 0.7) {
+      let satelliteAngle = baseAngle * 2 + frameCount * 0.3;
+      let satelliteOffset = size * 0.03;
+      let satelliteX = px + cos(satelliteAngle) * satelliteOffset;
+      let satelliteY = py + sin(satelliteAngle) * satelliteOffset;
       
       let satelliteSize = dotSize * 0.6;
-      let satelliteColor = random(palette);
+      let satelliteColor = color(random(palette));
+      satelliteColor.setAlpha(150 * influence);
       
       fill(satelliteColor);
       ellipse(satelliteX, satelliteY, satelliteSize);
@@ -188,36 +241,64 @@ function drawConnectingOrbit(orbitRadius, size, palette, outerDotCount) {
   }
 }
 
-// Draw a three-layer concentric dot
-function drawConcentricDot(x, y, baseSize) {
+// Draw animated concentric dot
+function drawAnimatedConcentricDot(x, y, baseSize, rotation, influence) {
   push();
   translate(x, y);
+  
+  // Rotate each dot individually
+  rotate(rotation * 3);
+  
+  // Pulsing effect
+  let pulse = sin(frameCount * 0.3) * 0.2 + 1;
+  let animatedSize = baseSize * pulse * influence;
   
   // Outer orange ring
   fill("#FF9800");
   noStroke();
-  ellipse(0, 0, baseSize);
+  ellipse(0, 0, animatedSize);
   
   // Middle black ring
   fill("#000000");
-  ellipse(0, 0, baseSize * 0.7);
+  ellipse(0, 0, animatedSize * 0.7);
   
   // Center white dot
   fill("#FFFFFF");
-  ellipse(0, 0, baseSize * 0.4);
+  ellipse(0, 0, animatedSize * 0.4);
   
   pop();
 }
 
-// Handle window resizing
-function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
-  redraw();
+// Display interaction instructions
+function displayInstructions() {
+  fill(255);
+  noStroke();
+  textSize(14);
+  text("Move mouse: Control rotation speed and circle size", 20, 30);
+  text("Mouse position: Circles react to proximity", 20, 50);
+  text("Click: Change color theme", 20, 70);
+  text("Press SPACE: Regenerate artwork", 20, 90);
+}
+
+// Mouse click to change color palette
+function mousePressed() {
+  currentPaletteIndex = (currentPaletteIndex + 1) % colorPalettes.length;
+  
+  // Update all circles with new palette
+  for (let circle of circles) {
+    circle.palette = colorPalettes[currentPaletteIndex];
+  }
 }
 
 // Keyboard interaction - press space to regenerate artwork
 function keyPressed() {
   if (key === ' ') {
-    redraw();
+    generateCircles();
   }
+}
+
+// Handle window resizing
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  generateCircles(); // Regenerate circles to fit new window size
 }
