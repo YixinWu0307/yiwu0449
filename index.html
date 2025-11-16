@@ -12,6 +12,13 @@
             overflow: hidden;
             font-family: Arial, sans-serif;
         }
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
         .info {
             position: absolute;
             top: 10px;
@@ -28,8 +35,9 @@
 <body>
     <div class="info">
         Pacita Abad - "Wheels of Fortune" - User Input Animation<br>
-        Move mouse to control animation | Click to change colors | SPACE to regenerate
+        Click & Drag circles | Move mouse to control animation | C key: Change colors | SPACE: Regenerate
     </div>
+    <div id="canvas-container"></div>
     <script src="sketch.js"></script>
 </body>
 </html>
